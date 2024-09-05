@@ -1,0 +1,13 @@
+Flask
+Flask-Cors
+requests
+beautifulsoup4
+python-docx
+PyPDF2
+pdfminer.six
+pytesseract
+Pillow
+tensorflow
+openpyxl
+fitz
+

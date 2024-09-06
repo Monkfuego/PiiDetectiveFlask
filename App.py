@@ -1,40 +1,70 @@
-from flask import Flask, request, jsonify
-from pii_detective import pii_detect_layer1, pii_detect_layer2
-import os
-import tempfile
+import React, { useState } from 'react';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import styles from './UploadForm.module.css';
 
-app = Flask(__name__)
+function UploadForm() {
+  const [file, setFile] = useState(null);
+  const [results, setResults] = useState(null);  // To display results after file submission
 
-def detector_main(file):
-    ext = os.path.splitext(file.filename)[1].lower()
-    
-    # Save file temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
-        file.save(temp_file.name)
-        temp_file_path = temp_file.name
-    
-    if ext in ['.jpg', '.jpeg', '.png']:
-        result = pii_detect_layer2(temp_file_path)
-    elif ext in ['.txt', '.docx', '.pdf', '.html', '.htm', '.csv', '.xml', '.json', '.xlsx']:
-        result = pii_detect_layer1(temp_file_path) + pii_detect_layer2(temp_file_path)
-    else:
-        result = f"Unsupported file extension: {ext}"
-    
-    # Clean up the temp file
-    os.remove(temp_file_path)
-    
-    return result
+  const handleFileChange = (event) => {
+    setFile(event.target.files[0]);
+  };
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    if file:
-        output = detector_main(file)
-        return jsonify({'output': output}), 200
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    if (!file) {
+      alert("Please upload a file");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('http://localhost:5000/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const result = await response.json();
+      setResults(result);  // Display the results
+      console.log('Response:', result);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  return (
+    <div className={`container mt-4 ${styles.uploadFormContainer}`}>
+      <div className="row">
+        <div className="col-md-6 offset-md-3">
+          <div className="card bg-secondary">
+            <div className="card-body">
+              <h5 className="card-title text-dark"><b>Upload Document</b></h5>
+              <form onSubmit={handleSubmit}>
+                <div className="mb-3">
+                  <input 
+                    type="file" 
+                    className="form-control" 
+                    onChange={handleFileChange} 
+                  />
+                </div>
+                <button type="submit" className="btn btn-dark text-light">Upload</button>
+              </form>
+
+              {results && (
+                <div className="mt-4">
+                  <h6>Results:</h6>
+                  <pre>{JSON.stringify(results, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default UploadForm;
